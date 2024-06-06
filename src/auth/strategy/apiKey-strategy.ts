@@ -7,9 +7,6 @@ import { AuthService } from '../auth.service'
 export class ApiKeyStratege extends PassportStrategy(HeaderAPIKeyStrategy, 'api-key') {
   constructor(private authService: AuthService) {
     super({ header: 'X-API-KEY', prefix: '' }, true, async (apiKey: string, done) => {
-      // if (!UUID_REGEX.test(apiKey)) {
-      //   return done(new UnauthorizedException('Invalid API key format'), false)
-      // }
       const isValidApiKey = await this.authService.validateApiKey(apiKey)
       return isValidApiKey ? done(null, true) : done(new UnauthorizedException(), false)
     })

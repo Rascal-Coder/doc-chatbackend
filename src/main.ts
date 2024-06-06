@@ -6,21 +6,24 @@ import helmet from 'helmet'
 import { ApiKeyAuthGuard } from './auth/guard/apiKey-auth.guard'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
-  // Security
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true
+  })
+
+  //Security
   app.useGlobalGuards(new ApiKeyAuthGuard())
   app.enableCors()
   app.use(helmet())
 
-  // 接口版本控制
   app.enableVersioning({
     type: VersioningType.URI
   })
-  // Swagger 文档
+
+  // OpenApi swagger documentation
   const config = new DocumentBuilder()
     .setTitle('Organize Simple API')
     .setDescription(
-      'Organize Simple is an API that allows you data in a way that is easy to use and understand with the power of large language models'
+      'Organize Simple is an API that allows you to organize your data in a way that is easy to use and understand with the power of large language models.'
     )
     .setVersion('1.0')
     .addApiKey(
@@ -34,10 +37,12 @@ async function bootstrap() {
     )
     .addTag('organize-simple')
     .build()
+
   const document = SwaggerModule.createDocument(app, config)
-  SwaggerModule.setup('api/doc', app, document)
+  SwaggerModule.setup('api', app, document)
 
   app.useGlobalPipes(new ValidationPipe())
+
   await app.listen(3000)
 }
 bootstrap()

@@ -73,10 +73,10 @@ export class PdfParserController {
   @Post('upload')
   async parsePdfFromUpload(@UploadedFile(pdfPipe) file: Express.Multer.File): Promise<PdfParserUploadResultDto> {
     try {
-      const text = await this.pdfParserService.parsePdf(file.buffer)
+      const docs = await this.pdfParserService.parsePdf(file.buffer)
       return {
         originalFileName: file.originalname,
-        content: text
+        docs: docs
       }
     } catch (e) {
       throw new UnprocessableEntityException(e.message)
