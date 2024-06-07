@@ -3,7 +3,8 @@
     "paths": {
       "@app/common/*": [
         "libs/common/*"
-      ]
+      ],
+      "@/*": ["src/*"]
     },
     "module": "commonjs",
     "declaration": true,
