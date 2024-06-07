@@ -2,9 +2,10 @@ import { Module } from '@nestjs/common'
 import { ParsersController } from './parsers.controller'
 import { PdfParserService } from './pdf-parser/pdf-parser.service'
 import { PdfParserController } from './pdf-parser/pdf-parser.controller'
+import { SplitterService } from './splitter/splitter.service';
 
 @Module({
   controllers: [ParsersController, PdfParserController],
-  providers: [PdfParserService]
+  providers: [PdfParserService, SplitterService]
 })
 export class ParsersModule {}

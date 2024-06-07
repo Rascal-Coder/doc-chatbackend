@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common'
 import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf'
-import { Document } from 'langchain/document'
+// import { Document } from 'langchain/document'
 import { PdfNotParsedError } from './exceptions'
 
 @Injectable()
 export class PdfParserService {
   constructor() {}
-  async parsePdf(file: Buffer): Promise<Document<Record<string, any>>[]> {
+  async parsePdf(file: Buffer) {
     const blobFile = new Blob([file])
     const loader = new PDFLoader(blobFile, {
       splitPages: true
