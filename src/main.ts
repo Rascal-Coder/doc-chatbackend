@@ -4,9 +4,14 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { ValidationPipe, VersioningType } from '@nestjs/common'
 import helmet from 'helmet'
 import { ApiKeyAuthGuard } from './auth/guard/apiKey-auth.guard'
-
+import { AllExceptionsFilter, HttpExceptionFilter } from '@app/common/exceptions'
+import { TransformInterceptor } from '@app/common/interceptors'
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
+  // 全局返回参数
+  app.useGlobalInterceptors(new TransformInterceptor())
+  // 异常过滤器
+  app.useGlobalFilters(new AllExceptionsFilter(), new HttpExceptionFilter())
   // Security
   app.useGlobalGuards(new ApiKeyAuthGuard())
   app.enableCors()
@@ -35,7 +40,7 @@ async function bootstrap() {
     .addTag('organize-simple')
     .build()
   const document = SwaggerModule.createDocument(app, config)
-  SwaggerModule.setup('api/doc', app, document)
+  SwaggerModule.setup('api', app, document)
 
   app.useGlobalPipes(new ValidationPipe())
   await app.listen(3000)

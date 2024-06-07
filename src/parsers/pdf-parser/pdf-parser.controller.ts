@@ -1,12 +1,15 @@
 import {
+  Body,
   Controller,
   HttpCode,
   ParseFilePipeBuilder,
   Post,
-  UnprocessableEntityException,
+  // UnprocessableEntityException,
+  // BadRequestException,
   UploadedFile,
   UseInterceptors
 } from '@nestjs/common'
+import { BusinessException } from '@app/common/exceptions'
 import { FileInterceptor } from '@nestjs/platform-express'
 import {
   ApiBadRequestResponse,
@@ -19,8 +22,12 @@ import {
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse
 } from '@nestjs/swagger'
-import { PdfParserUploadResultDto } from './dto/pdf-parser-result.dto'
 import { PdfParserService } from './pdf-parser.service'
+import { PdfParserUploadResultDto, PdfParserUrlResultDto } from './dto/pdf-parser-result.dto'
+import { PdfParserRequestDto } from './dto/pdf-parser-request.dto'
+import { PdfNotParsedError } from './exceptions'
+import { ISOLogger } from 'src/logger/isoLogger.service'
+
 const uploadSchema = {
   type: 'object',
   properties: {
@@ -30,6 +37,7 @@ const uploadSchema = {
     }
   }
 }
+
 const pdfPipe = new ParseFilePipeBuilder()
   .addFileTypeValidator({
     fileType: 'pdf'
@@ -52,9 +60,14 @@ const pdfPipe = new ParseFilePipeBuilder()
 })
 @ApiSecurity('apiKey')
 @ApiTags('parsers')
-@Controller({ path: 'parser/pdf', version: '1' })
+@Controller({ path: 'parsers/pdf', version: '1' })
 export class PdfParserController {
-  constructor(private readonly pdfParserService: PdfParserService) {}
+  constructor(
+    private readonly pdfParserService: PdfParserService,
+    private logger: ISOLogger
+  ) {
+    this.logger.setContext(PdfParserController.name)
+  }
 
   @ApiOperation({
     summary: 'Return text from uploaded PDF file',
@@ -69,17 +82,52 @@ export class PdfParserController {
   @ApiConsumes('multipart/form-data')
   @ApiBody({ schema: uploadSchema, description: 'PDF file to be parsed' })
   @UseInterceptors(FileInterceptor('file'))
-  @HttpCode(200)
   @Post('upload')
+  @HttpCode(200)
   async parsePdfFromUpload(@UploadedFile(pdfPipe) file: Express.Multer.File): Promise<PdfParserUploadResultDto> {
     try {
       const text = await this.pdfParserService.parsePdf(file.buffer)
+      this.logger.log('PDF Controller successfully parsed!!')
       return {
         originalFileName: file.originalname,
         content: text
       }
     } catch (e) {
-      throw new UnprocessableEntityException(e.message)
+      this.logger.warn('UnprocessableEntityException thrown')
+      //  throw new UnprocessableEntityException(e.message);
+      throw new BusinessException(e.message)
+    }
+  }
+
+  @ApiOperation({
+    summary: 'Return text from PDF file provided by URL',
+    description: `This endpoint retrieves the content of an PDF file available through an URL and returns it as a text.\n
+    The file must be a PDF parsable text context, with a maximum size of 5MB`
+  })
+  @ApiOkResponse({
+    type: PdfParserUploadResultDto,
+    description: 'The PDF was parsed and post-processed successfully. Its content is returned as text.'
+  })
+  @Post('url')
+  @HttpCode(200)
+  async parsePdfFromUrl(@Body() requestDto: PdfParserRequestDto): Promise<PdfParserUrlResultDto> {
+    try {
+      const file = await this.pdfParserService.loadPdfFromUrl(requestDto.url)
+      const text = await this.pdfParserService.parsePdf(file)
+
+      return {
+        originalUrl: requestDto.url,
+        content: text
+      }
+    } catch (e) {
+      if (e instanceof PdfNotParsedError) {
+        this.logger.warn('UnprocessableEntityException thrown')
+        //  throw new UnprocessableEntityException(e.message);
+        throw new BusinessException(e.message)
+      }
+      this.logger.warn('BadRequestException thrown')
+      //  throw new BadRequestException(e.message);
+      throw new BusinessException(e.message)
     }
   }
 }
